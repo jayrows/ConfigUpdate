@@ -1,0 +1,32 @@
+{
+ "Version": "1",
+ "ReleaseNotes": "test",
+ "Servers": [
+  {
+   "Category": "FREE",
+   "Slowdns": "",
+   "Slowchave": "",
+   "Nameserver": "",
+   "Edson": "SSH",
+   "Name": "test tisting",
+   "FLAG": "ph.png",
+   "ServerIP": "",
+   "ServerPort": "",
+   "SSLPort": "",
+   "ProxyIP": "",
+   "ProxyPort": "",
+   "ServerUser": "",
+   "ServerPass": "",
+   "sInfo": "",
+   "Payload": "",
+   "SNI": "",
+   "isSSL": false,
+   "wsPayload": true,
+   "sslpayload": false,
+   "isSLOWDNS": false,
+   "isFree": true,
+   "isPremium": false,
+   "isPrivate": false
+  }
+ ]
+}
