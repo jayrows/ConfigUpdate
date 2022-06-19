@@ -1,0 +1,1277 @@
+package com.slipkprojects.sockshttp;
+
+import android.app.Activity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.res.Configuration;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.PersistableBundle;
+import androidx.annotation.Nullable;
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.textfield.TextInputEditText;
+import androidx.fragment.app.DialogFragment;
+import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.core.view.GravityCompat;
+import androidx.viewpager.widget.PagerAdapter;
+import androidx.viewpager.widget.ViewPager;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.widget.AppCompatRadioButton;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.appcompat.widget.SwitchCompat;
+import androidx.appcompat.widget.Toolbar;
+import android.text.Html;
+import android.text.InputType;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
+import com.google.android.gms.ads.AdListener;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.slipkprojects.sockshttp.R;
+import com.slipkprojects.sockshttp.SocksHttpApp;
+import com.slipkprojects.sockshttp.activities.ExceptionHandler;
+import com.slipkprojects.sockshttp.activities.BaseActivity;
+import com.slipkprojects.sockshttp.activities.ConfigGeralActivity;
+import com.slipkprojects.sockshttp.adapter.LogsAdapter;
+import com.slipkprojects.sockshttp.adapter.SpinnerAdapter;
+import com.slipkprojects.sockshttp.util.AESCrypt;
+import com.slipkprojects.sockshttp.util.ConfigUpdate;
+import com.slipkprojects.sockshttp.util.ConfigUtil;
+import com.slipkprojects.sockshttp.util.Utils;
+import com.slipkprojects.ultrasshservice.LaunchVpn;
+import com.slipkprojects.ultrasshservice.SocksHttpService;
+import com.slipkprojects.ultrasshservice.StatisticGraphData;
+import com.slipkprojects.ultrasshservice.StatisticGraphData.DataTransferStats;
+import com.slipkprojects.ultrasshservice.config.ConfigParser;
+import com.slipkprojects.ultrasshservice.config.Settings;
+import com.slipkprojects.ultrasshservice.logger.ConnectionStatus;
+import com.slipkprojects.ultrasshservice.logger.SkStatus;
+import com.slipkprojects.ultrasshservice.tunnel.TunnelManagerHelper;
+import com.slipkprojects.ultrasshservice.tunnel.TunnelUtils;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+import org.json.JSONException;
+import org.json.JSONObject;
+import com.slipkprojects.sockshttp.adapter.PromoAdapter;
+import android.content.ClipboardManager;
+import android.content.ClipData;
+import org.json.JSONArray;
+import android.widget.CheckBox;
+import android.util.TypedValue;
+import android.preference.PreferenceManager;
+import com.google.android.material.snackbar.Snackbar;
+import android.view.View.OnClickListener;
+import com.slipkprojects.sockshttp.activities.CustomDNS;
+import com.slipkprojects.ultrasshservice.util.securepreferences.SecurePreferences;
+import android.widget.AdapterView;
+import android.app.ProgressDialog;
+import android.view.Gravity;
+import java.util.Objects;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.Reader;
+import com.slipkprojects.ultrasshservice.tunnel.NetSpeedNotification;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import android.graphics.drawable.AnimationDrawable;
+import com.github.mikephil.charting.charts.LineChart;
+import com.slipkprojects.sockshttp.Graph.GraphHelper;
+import com.slipkprojects.sockshttp.Graph.StoredData;
+import com.slipkprojects.sockshttp.Graph.RetrieveData;
+import com.slipkprojects.sockshttp.Graph.DataTransferGraph2;
+
+/**
+ * Activity Principal
+ * @author SlipkHunter
+ */
+
+public class SocksHttpMainActivity extends BaseActivity
+	implements View.OnClickListener, SkStatus.StateListener
+{
+    public static final String OPEN_LOGS = "com.slipkprojects.sockshttp:openLogs";
+    private TextView connectionStatus;
+    private LogsAdapter mLogAdapter;
+    private RecyclerView logList;
+    private ViewPager vp;
+    private TabLayout tabs;
+	private TextView bytesIn;
+	private TextView bytesOut;
+    private SecurePreferences prefs;
+	private Settings mConfig;
+	private Toolbar toolbar_main;
+	private Handler mHandler;
+
+	private Button starterButton;
+	private AdView adsBannerView;
+
+	private ConfigUtil config;
+	public static int PICK_FILE = 1;
+	private Spinner serverSpinner;
+	private Spinner payloadSpinner;
+    private static final String[] tabTitle = {"Home","Log"};
+	private SpinnerAdapter serverAdapter;
+	private PromoAdapter payloadAdapter;
+	private ArrayList<JSONObject> serverList;
+	private ArrayList<JSONObject> payloadList;
+	private CheckBox dnsCheckBox;
+    public static String UPDATE_VIEWS = "UPDATE_VIEWS";
+	
+    int status = 0 ;
+    ProgressDialog pd;
+    byte[] YourDataA;
+    
+    public static View graph_flip;
+    public static View image_flip;
+    private LineChart mChart;
+    private GraphHelper graph;
+	private Handler fHandler = new Handler();
+    private Thread dataThread;
+    private Thread dataUpdate;
+    
+    
+	@Override
+    protected void onCreate(@Nullable Bundle savedInstanceState)
+    {
+        super.onCreate(savedInstanceState);
+        
+		mHandler = new Handler();
+		mConfig = new Settings(this);
+        prefs = mConfig.getPrefsPrivate();
+        Thread.setDefaultUncaughtExceptionHandler(new ExceptionHandler(this));
+		SharedPreferences prefs = getSharedPreferences(SocksHttpApp.PREFS_GERAL, Context.MODE_PRIVATE);
+		boolean showFirstTime = prefs.getBoolean("connect_first_time", true);
+		int lastVersion = prefs.getInt("last_version", 0);
+		if (showFirstTime)
+        {
+            SharedPreferences.Editor pEdit = prefs.edit();
+            pEdit.putBoolean("connect_first_time", false);
+            pEdit.apply();
+			Settings.setDefaultConfig(this);
+			showBoasVindas();
+        }
+
+		try {
+			int idAtual = ConfigParser.getBuildId(this);
+
+			if (lastVersion < idAtual) {
+				SharedPreferences.Editor pEdit = prefs.edit();
+				pEdit.putInt("last_version", idAtual);
+				pEdit.apply();
+
+				if (!showFirstTime) {
+					if (lastVersion <= 12) {
+						Settings.setDefaultConfig(this);
+						Settings.clearSettings(this);
+
+						Toast.makeText(this, "As configurações foram limpas para evitar bugs",
+							Toast.LENGTH_LONG).show();
+					}
+				}
+
+			}
+		} catch(IOException e) {}
+		doLayout();
+		
+		IntentFilter filter = new IntentFilter();
+		filter.addAction(UPDATE_VIEWS);
+		filter.addAction(OPEN_LOGS);
+		
+		LocalBroadcastManager.getInstance(this)
+			.registerReceiver(mActivityReceiver, filter);
+			
+		doUpdateLayout();
+        liveData();
+        image_flip = findViewById(R.id.image_l);
+        graph_flip = findViewById(R.id.graph_l);
+        mChart = (LineChart) findViewById(R.id.chart1);
+        graph = GraphHelper.getHelper().with(this).color(ContextCompat.getColor(this,R.color.graphColor)).chart(mChart);
+        if (!StoredData.isSetData)
+        {
+            StoredData.setZero();
+		}
+        
+	}
+    
+    public void flip(View v){
+        if (image_flip.getVisibility() == View.VISIBLE) {
+            new edsongraphflip(SocksHttpMainActivity.this, "start");
+        }else{
+            new edsongraphflip(SocksHttpMainActivity.this, "stop");
+        }
+    }
+
+    
+
+    private void liveData()
+    {
+        dataUpdate = new Thread(new Runnable() {
+                @Override
+                public void run()
+                {
+
+                    while (!dataUpdate.getName().equals("stopped"))
+                    {
+
+                        fHandler.post(new Runnable() {
+
+                                //private static final long xup = 0;
+
+                                @Override
+                                public void run()
+                                {
+                                    if(toString().equals("Connected")){
+                                        graph.start();
+                                    }
+                                }
+                            });
+
+                        try
+                        {
+                            Thread.sleep(1000);
+                        }
+                        catch (InterruptedException e)
+                        {
+                            e.printStackTrace();
+                        }
+                        //  progressStatus--;
+                    }
+
+                }
+            });
+
+        dataUpdate.setName("started");
+        dataUpdate.start();
+    }
+    final class MyThreadClass implements Runnable{
+        @Override
+        public void run(){
+            int i = 0;
+            synchronized (this)
+            {
+                while (dataThread.getName() == "showDataGraph")
+                {
+                    //  Log.e("insidebroadcast", Integer.toString(service_id) + " " + Integer.toString(i));
+                    getData2();
+                    try
+                    {
+                        wait(1000);
+                        i++;
+                    }
+                    catch (InterruptedException e)
+                    {
+                        // sshMsg(e.getMessage());
+                    }
+
+                }
+                // stopSelf(service_id);
+            }
+
+        }
+    }
+
+    public void getData2(){
+        List<Long> allData;
+        allData = RetrieveData.findData();
+        long mDownload = DataTransferGraph2.download;
+        long mUpload = DataTransferGraph2.upload;
+        mDownload = allData.get(0);
+        mUpload = allData.get(1);
+        storedData2(mUpload,mDownload);
+    }
+
+    public void storedData2(Long mUpload,Long mDownload){
+        StoredData.downloadSpeed = mDownload;
+        StoredData.uploadSpeed = mUpload;
+        if (StoredData.isSetData){
+            StoredData.downloadList.remove(0);
+            StoredData.uploadList.remove(0);
+            StoredData.downloadList.add(mDownload);
+            StoredData.uploadList.add(mUpload);
+        }
+    } //END
+    
+	 
+	private void doLayout() {
+		final SharedPreferences mPref = PreferenceManager.getDefaultSharedPreferences(this);
+		setContentView(R.layout.activity_main_drawer);
+		toolbar_main = (Toolbar) findViewById(R.id.toolbar_main);
+		setSupportActionBar(toolbar_main);
+		adsBannerView = (AdView) findViewById(R.id.adBannerMainView);
+		if (TunnelUtils.isNetworkOnline(SocksHttpMainActivity.this)) {
+			adsBannerView.setAdListener(new AdListener() {
+				@Override
+				public void onAdLoaded() {
+					if (adsBannerView != null) {
+						adsBannerView.setVisibility(View.VISIBLE);
+					}
+				}
+			});
+			adsBannerView.loadAd(new AdRequest.Builder()
+				.build());
+		}
+		
+		dnsCheckBox=(CheckBox) findViewById(R.id.useDns);
+		dnsCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+				public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+					mPref.edit().putBoolean("startDns",isChecked).apply();
+				}
+			});
+		dnsCheckBox.setTextSize(TypedValue.COMPLEX_UNIT_DIP,12);
+		starterButton = (Button) findViewById(R.id.activity_starterButtonMain);
+		
+        final SharedPreferences prefs = mConfig.getPrefsPrivate();
+        SharedPreferences.Editor edit = prefs.edit();
+		SharedPreferences sPrefs = mConfig.getPrefsPrivate();
+        sPrefs.edit().putBoolean(Settings.PROXY_USAR_DEFAULT_PAYLOAD, false).apply();
+		sPrefs.edit().putInt(Settings.TUNNELTYPE_KEY, Settings.bTUNNEL_TYPE_SSH_PROXY).apply();
+        config = new ConfigUtil(this);
+		serverSpinner = (Spinner) findViewById(R.id.serverSpinner);
+		payloadSpinner = (Spinner) findViewById(R.id.payloadSpinner);
+        connectionStatus = (TextView) findViewById(R.id.connection_status);
+		serverList = new ArrayList<>();
+		payloadList = new ArrayList<>();
+        
+        LinearLayout LinearLayout = (LinearLayout) findViewById(R.id.layout);
+        AnimationDrawable animationDrawable = (AnimationDrawable) LinearLayout.getBackground();
+        animationDrawable.setEnterFadeDuration(2000);
+        animationDrawable.setExitFadeDuration(4000);
+        animationDrawable.start();
+        
+
+		serverAdapter = new SpinnerAdapter(this, R.id.serverSpinner, serverList);
+		payloadAdapter = new PromoAdapter(this, R.id.payloadSpinner, payloadList);
+		serverSpinner.setAdapter(serverAdapter);
+		payloadSpinner.setAdapter(payloadAdapter);
+
+		loadServer();
+		loadNetworks();
+		updateConfig(true);
+        
+        //Server
+        serverSpinner.setSelection(prefs.getInt("LastSelectedServer", 0));
+        serverSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+
+                @Override
+                public void onItemSelected(AdapterView<?> p1, View p2, int p3, long p4) {
+
+                    SharedPreferences prefs = mConfig.getPrefsPrivate();
+                    SharedPreferences.Editor edit = prefs.edit();
+                    edit.putInt("LastSelectedServer", p3).apply();
+
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> p1) {
+                }
+            });////END
+        
+        
+        //payload
+        payloadSpinner.setSelection(prefs.getInt("LastSelectedPayload", -1));
+		payloadSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){
+
+                @Override
+                public void onItemSelected(AdapterView<?> p1, View p2, int p3, long p4) {
+
+                    SharedPreferences prefs = mConfig.getPrefsPrivate();
+                    SharedPreferences.Editor edit = prefs.edit();
+                    int pos = payloadSpinner.getSelectedItemPosition();
+                    edit.putInt("LastSelectedPayload", pos).apply();
+                   
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> p1) {
+                }
+            }); //end
+		
+	
+        
+		starterButton.setOnClickListener(this);
+		dnsCheckBox.setOnClickListener(this);
+
+		bytesIn = (TextView) findViewById(R.id.bytesIn);
+        bytesOut = (TextView) findViewById(R.id.bytesOut);
+      
+        
+        doTabs();
+	}
+	
+	private void updateHeaderCallback() {
+		DataTransferStats dataTransferStats = StatisticGraphData.getStatisticData().getDataTransferStats();
+		bytesIn.setText(dataTransferStats.byteCountToDisplaySize(dataTransferStats.getTotalBytesReceived(), false));
+		bytesOut.setText(dataTransferStats.byteCountToDisplaySize(dataTransferStats.getTotalBytesSent(), false));
+	}
+    
+    public void doTabs() {
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        mLogAdapter = new LogsAdapter(layoutManager,this);
+        logList = (RecyclerView) findViewById(R.id.recyclerLog);
+        logList.setAdapter(mLogAdapter);
+        logList.setLayoutManager(layoutManager);
+        mLogAdapter.scrollToLastPosition();
+        vp = (ViewPager)findViewById(R.id.viewpager);
+        tabs = (TabLayout)findViewById(R.id.tablayout);
+        vp.setAdapter(new MyAdapter(Arrays.asList(tabTitle)));
+        vp.setOffscreenPageLimit(2);
+        tabs.setTabMode(TabLayout.MODE_FIXED);
+        tabs.setTabGravity(TabLayout.GRAVITY_FILL);
+        tabs.setupWithViewPager(vp);
+		
+		vp.setOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener()
+            {
+                @Override
+                public void onPageSelected(int position)
+                {
+                    if (position == 0) {
+                        toolbar_main.getMenu().clear();
+						getMenuInflater().inflate(R.menu.main_menu, toolbar_main.getMenu());
+                    } else if (position == 1) {
+                        toolbar_main.getMenu().clear();
+						getMenuInflater().inflate(R.menu.logs_menu, toolbar_main.getMenu());
+                    }
+                }
+			});
+        }
+        
+    public class MyAdapter extends PagerAdapter
+    {
+
+        @Override
+        public int getCount()
+        {
+            // TODO: Implement this method
+            return 2;
+        }
+
+        @Override
+        public boolean isViewFromObject(View p1, Object p2)
+        {
+            // TODO: Implement this method
+            return p1 == p2;
+        }
+
+        @Override
+        public Object instantiateItem(ViewGroup container, int position)
+        {
+            int[] ids = new int[]{R.id.tab1, R.id.tab2};
+            int id = 0;
+            id = ids[position];
+            // TODO: Implement this method
+            return findViewById(id);
+        }
+
+        @Override
+        public CharSequence getPageTitle(int position)
+        {
+            // TODO: Implement this method
+            return titles.get(position);
+        }
+
+        private List<String> titles;
+        public MyAdapter(List<String> str)
+        {
+            titles = str;
+        }
+	}
+        
+	private void doUpdateLayout() {
+		SharedPreferences prefs = mConfig.getPrefsPrivate();
+		final SharedPreferences mPref = PreferenceManager.getDefaultSharedPreferences(this);
+		boolean isRunning = SkStatus.isTunnelActive();
+		setStarterButton(starterButton, this);
+		dnsCheckBox.setChecked(mPref.getBoolean("startDns",true));
+		dnsCheckBox.setEnabled(!isRunning);
+		
+        }
+
+		
+	
+	private synchronized void doSaveData() {
+        try {
+            SharedPreferences prefs = mConfig.getPrefsPrivate();
+            SharedPreferences.Editor edit = prefs.edit();
+			if (!prefs.getBoolean(Settings.CONFIG_PROTEGER_KEY, false)) {
+                if (!prefs.getBoolean(Settings.PROXY_USAR_DEFAULT_PAYLOAD, true)) {
+                    int pos = payloadSpinner.getSelectedItemPosition();
+                    boolean directModeType = config.getNetworksArray().getJSONObject(pos).getBoolean("isSSL");
+                    boolean sshssltype =  config.getNetworksArray().getJSONObject(pos).getBoolean("wsPayload");
+                    boolean remotessltype = config.getNetworksArray().getJSONObject(pos).getBoolean("remoteHost");
+                    boolean slowdnstype = config.getNetworksArray().getJSONObject(pos).getBoolean("SlowDns");
+                    if (directModeType) {
+                        prefs.edit().putInt(Settings.TUNNELTYPE_KEY, Settings.bTUNNEL_TYPE_SSH_SSL).apply();
+                        String sni = config.getNetworksArray().getJSONObject(pos).getString("SNI");
+                        edit.putString(Settings.CUSTOM_PAYLOAD_KEY, sni);
+
+
+                    } else if (sshssltype) {
+                        prefs.edit().putInt(Settings.TUNNELTYPE_KEY, Settings.bTUNNEL_TYPE_PAY_SSL).apply();
+                        String payload = config.getNetworksArray().getJSONObject(pos).getString("Payload");
+                        String snissl = config.getNetworksArray().getJSONObject(pos).getString("SNI");
+                        edit.putString(Settings.CUSTOM_PAYLOAD_KEY, payload);
+                        edit.putString(Settings.CUSTOM_SNI, snissl);
+
+                    }else if (remotessltype){
+                        prefs.edit().putInt(Settings.TUNNELTYPE_KEY, Settings.bTUNNEL_TYPE_SSL_RP).apply();
+                        String payloadrp = config.getNetworksArray().getJSONObject(pos).getString("Payload");
+                        String sslrp = config.getNetworksArray().getJSONObject(pos).getString("SNI");
+                        edit.putString(Settings.CUSTOM_PAYLOAD_KEY, payloadrp);
+                        edit.putString(Settings.CUSTOM_SNI, sslrp);
+
+                    }else if (slowdnstype){
+                        prefs.edit().putInt(Settings.TUNNELTYPE_KEY, Settings.bTUNNEL_TYPE_SLOWDNS).apply();
+                        String chvKey = config.getNetworksArray().getJSONObject(pos).getString("chaveKey");
+                        String nvKey = config.getNetworksArray().getJSONObject(pos).getString("serverNameKey");
+                        String dnsKey = config.getNetworksArray().getJSONObject(pos).getString("dnsKey");
+
+                        edit.putString(Settings.CHAVE_KEY, chvKey);
+                        edit.putString(Settings.NAMESERVER_KEY, nvKey);
+                        edit.putString(Settings.DNS_KEY, dnsKey);
+
+                    } else {
+                        prefs.edit().putInt(Settings.TUNNELTYPE_KEY, Settings.bTUNNEL_TYPE_SSH_PROXY).apply();
+                        String payload = config.getNetworksArray().getJSONObject(pos).getString("Payload");
+                        edit.putString(Settings.CUSTOM_PAYLOAD_KEY, payload);
+                    }
+                }
+            }
+			edit.apply();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	private void loadServerData() {
+        try {
+            SharedPreferences prefs = mConfig.getPrefsPrivate();
+            SharedPreferences.Editor edit = prefs.edit();
+            int pos1 = serverSpinner.getSelectedItemPosition();
+            int pos2 = payloadSpinner.getSelectedItemPosition();
+            boolean directModeType = config.getNetworksArray().getJSONObject(pos2).getBoolean("isSSL");
+            boolean sshssltype = config.getNetworksArray().getJSONObject(pos2).getBoolean("wsPayload");
+            boolean remotessltype = config.getNetworksArray().getJSONObject(pos2).getBoolean("remoteHost");
+            boolean slowdnstype = config.getNetworksArray().getJSONObject(pos2).getBoolean("SlowDns");
+            if (directModeType) {
+                String ssl_port = config.getServersArray().getJSONObject(pos1).getString("SSLPort");
+                edit.putString(Settings.SERVIDOR_PORTA_KEY, ssl_port);
+
+            } else if (sshssltype) {
+                String ssl_port1 = config.getServersArray().getJSONObject(pos1).getString("SSLPort");
+                edit.putString(Settings.SERVIDOR_PORTA_KEY, ssl_port1);
+
+            } else if (remotessltype) {
+                String ssl_port2 = config.getServersArray().getJSONObject(pos1).getString("SSLPort");
+                edit.putString(Settings.SERVIDOR_PORTA_KEY, ssl_port2);
+
+            } else if (slowdnstype) {
+				
+				
+                edit.putString(Settings.SERVIDOR_KEY, "127.0.0.1");
+                edit.putString(Settings.SERVIDOR_PORTA_KEY, "2222");
+
+            } else {
+                String ssh_port = config.getServersArray().getJSONObject(pos1).getString("ServerPort");
+                edit.putString(Settings.SERVIDOR_PORTA_KEY, ssh_port);
+            }
+
+            String ssh_server = config.getServersArray().getJSONObject(pos1).getString("ServerIP");
+            String remote_proxy = config.getServersArray().getJSONObject(pos1).getString("ProxyIP");
+            String proxy_port = config.getServersArray().getJSONObject(pos1).getString("ProxyPort");
+            String ssh_user = config.getServersArray().getJSONObject(pos1).getString("ServerUser");
+            String ssh_pass = config.getServersArray().getJSONObject(pos1).getString("ServerPass");
+
+            edit.putString(Settings.USUARIO_KEY, ssh_user);
+            edit.putString(Settings.SENHA_KEY, ssh_pass);
+            edit.putString(Settings.SERVIDOR_KEY, ssh_server);
+            edit.putString(Settings.PROXY_IP_KEY, remote_proxy);
+            edit.putString(Settings.PROXY_PORTA_KEY, proxy_port);
+
+            edit.apply();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+	}
+
+	private void loadServer() {
+		try {
+			if (serverList.size() > 0) {
+				serverList.clear();
+				serverAdapter.notifyDataSetChanged();
+			}
+			for (int i = 0; i < config.getServersArray().length(); i++) {
+				JSONObject obj = config.getServersArray().getJSONObject(i);
+				serverList.add(obj);
+				serverAdapter.notifyDataSetChanged();
+
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void loadNetworks1() {
+		try {
+			if (payloadList.size() > 0) {
+				payloadList.clear();
+				payloadAdapter.clear();
+			}
+			JSONObject obj = getJSONConfig2(this);
+			JSONArray networkPayload = obj.getJSONArray("Networks");
+			for (int i = 0; i < networkPayload.length(); i++) {
+				payloadList.add(networkPayload.getJSONObject(i));
+			}
+		
+			payloadAdapter.notifyDataSetChanged();
+		} catch (Exception e) {
+			Toast.makeText(SocksHttpMainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+		}
+	}
+
+	private void loadNetworks() {
+		try {
+			if (payloadList.size() > 0) {
+				payloadList.clear();
+				payloadAdapter.notifyDataSetChanged();
+			}
+			for (int i = 0; i < config.getNetworksArray().length(); i++) {
+				JSONObject obj = config.getNetworksArray().getJSONObject(i);
+				payloadList.add(obj);
+				payloadAdapter.notifyDataSetChanged();
+
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+  
+	private void updateConfig(final boolean isOnCreate) {
+		new ConfigUpdate(this, new ConfigUpdate.OnUpdateListener() {
+			@Override
+			public void onUpdateListener(String result) {
+				try {
+					if (!result.contains("Error on getting data")) {
+						String json_data = AESCrypt.decrypt(config.PASSWORD, result);
+						if (isNewVersion(json_data)) {
+							letUpdate(result);
+						} else {
+							if (!isOnCreate) {
+								noUpdateDialog();
+							}
+						}
+					} else if(result.contains("Error on getting data") && !isOnCreate){
+						errorUpdateDialog(result);
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}).start(isOnCreate);
+	}
+
+	private boolean isNewVersion(String result) {
+		try {
+			String current = config.getVersion();
+			String update = new JSONObject(result).getString("Version");
+			return config.versionCompare(update, current);
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
+
+    private void letUpdate(final String result /* KJAYDev */){
+        YourDataA=result.getBytes();
+        pd = new ProgressDialog(this);
+        pd.setTitle("New Update Available");
+        pd.setMessage("There is a new config update found. Would you like to update your config?");
+        pd.setMax(100);
+        pd.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        pd.setOnDismissListener(new DialogInterface.OnDismissListener(){
+
+                @Override
+                public void onDismiss(DialogInterface p1) {
+                    try {
+                        File file = new File(getFilesDir(), "Config.json");
+                        OutputStream out = new FileOutputStream(file);
+                        out.write(result.getBytes());
+                        out.flush();
+                        out.close();
+                       // restart_app();
+                        loadServer();
+                        loadNetworks();
+                    } catch (Exception e) {
+                        
+                    }
+                    status = 0;
+                    
+                }
+            });
+
+        new Thread(new Runnable() {
+
+                @Override
+                public void run() {
+                    while (status < 100) {
+                        status += 1;
+                        try {
+                            Thread.sleep(30);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        runOnUiThread(new Runnable() {
+
+                                @Override
+                                public void run() {
+                                    pd.setProgress(status);
+                                    if(status == 100) {
+                                        pd.dismiss();
+                                    }
+                                }
+                            });
+                    }
+                }
+            }).start();
+        Objects.requireNonNull(pd.getWindow()).setGravity(Gravity.BOTTOM);
+        pd.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
+        pd.show();
+	}
+    
+
+	private void noUpdateDialog() {
+		new AlertDialog.Builder(SocksHttpMainActivity.this)
+				.setTitle("No Update Available")
+				.setMessage("There is a no new update found.")
+				.setPositiveButton("Ok",null)
+				.create().show();
+	}
+
+	private void errorUpdateDialog(String error) {
+		new AlertDialog.Builder(SocksHttpMainActivity.this)
+				.setTitle("Error on update")
+				.setMessage("There is an error occurred when checking for update. Please contact Developer.\n" +
+						"Error:" + error)
+				.setPositiveButton("Ok", null)
+				.create().show();
+	}
+
+	private void restart_app() {
+		Intent intent = new Intent(this, SocksHttpMainActivity.class);
+		int i = 123456;
+		PendingIntent pendingIntent = PendingIntent.getActivity(this, i, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+		AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+		alarmManager.set(AlarmManager.RTC, System.currentTimeMillis() + ((long) 1000), pendingIntent);
+		finish();
+	}
+	
+	public void offlineUpdate() {
+		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+		intent.setType("*/*");
+		startActivityForResult(intent, PICK_FILE);
+	}
+	
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+
+		if (requestCode == PICK_FILE)
+		{
+			if (resultCode == RESULT_OK) {
+				try {
+					Uri uri = data.getData();
+					String intentData = importer(uri);
+					//String cipter = AESCrypt.decrypt(ConfigUtil.PASSWORD, intentData);
+					File file = new File(getFilesDir(), "Config.json");
+					OutputStream out = new FileOutputStream(file);
+					out.write(intentData.getBytes());
+					out.flush();
+					out.close();
+					loadServer();
+					loadNetworks();
+					restart_app();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	private String importer(Uri uri)
+	{
+		BufferedReader reader = null;
+		StringBuilder builder = new StringBuilder();
+		try
+		{
+			reader = new BufferedReader(new InputStreamReader(getContentResolver().openInputStream(uri)));
+
+			String line = "";
+			while ((line = reader.readLine()) != null)
+			{
+				builder.append(line);
+			}
+			reader.close();
+		}
+		catch (IOException e) {e.printStackTrace();}
+		return builder.toString();
+	} 
+
+	 
+	public void startOrStopTunnel(Activity activity) {
+		if (SkStatus.isTunnelActive()) {
+            SharedPreferences prefs = mConfig.getPrefsPrivate();
+			TunnelManagerHelper.stopSocksHttp(activity);
+			
+
+		}
+		else {
+			
+			
+			Settings mConfig = new Settings(activity);
+			
+			Intent intent = new Intent(activity, LaunchVpn.class);
+			intent.setAction(Intent.ACTION_MAIN);
+
+			if (mConfig.getHideLog()) {
+				intent.putExtra(LaunchVpn.EXTRA_HIDELOG, true);
+			}
+
+			activity.startActivity(intent);
+		}
+	}
+	
+	
+
+	public void setStarterButton(Button starterButton, Activity activity) {
+		String state = SkStatus.getLastState();
+		boolean isRunning = SkStatus.isTunnelActive();
+
+		if (starterButton != null) {
+			int resId;
+			
+			SharedPreferences prefsPrivate = new Settings(activity).getPrefsPrivate();
+
+			if (ConfigParser.isValidadeExpirou(prefsPrivate
+					.getLong(Settings.CONFIG_VALIDADE_KEY, 0))) {
+				resId = R.string.expired;
+				starterButton.setEnabled(false);
+
+				if (isRunning) {
+					startOrStopTunnel(activity);
+				}
+			}
+			else if (prefsPrivate.getBoolean(Settings.BLOQUEAR_ROOT_KEY, false) &&
+					ConfigParser.isDeviceRooted(activity)) {
+			   resId = R.string.blocked;
+			   starterButton.setEnabled(false);
+			   
+			   Toast.makeText(activity, R.string.error_root_detected, Toast.LENGTH_SHORT)
+					.show();
+
+			   if (isRunning) {
+				   startOrStopTunnel(activity);
+			   }
+			}
+			else if (SkStatus.SSH_INICIANDO.equals(state)) {
+				resId = R.string.stop;
+				starterButton.setEnabled(false);
+			}
+			else if (SkStatus.SSH_PARANDO.equals(state)) {
+				resId = R.string.state_stopping;
+				starterButton.setEnabled(false);
+			}
+			else {
+				resId = isRunning ? R.string.stop : R.string.start;
+				starterButton.setEnabled(true);
+			}
+
+			starterButton.setText(resId);
+		}
+	}
+	
+	
+	@Override
+	public void onClick(View p1)
+	{
+		SharedPreferences prefs = mConfig.getPrefsPrivate();
+
+		switch (p1.getId()) {
+			case R.id.activity_starterButtonMain:
+				doSaveData();
+				loadServerData();
+				startOrStopTunnel(this);
+                graph.start();  
+                //mShown = false;
+               // mShown2 = false;	
+				break;
+
+			
+			case R.id.useDns:
+				if(dnsCheckBox.isChecked()){
+					Snackbar.make(p1, Html.fromHtml("<font color='#0A87FB'>Improved privacy and bypass Internet Censorship</font>"), Snackbar.LENGTH_LONG).setAction("SET DNS", new OnClickListener()
+						{
+
+							@Override
+							public void onClick(View p1)
+							{
+								SharedPreferences mPref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+								if(dnsCheckBox.getText().toString().equals("DNS (Default DNS)")){
+									mPref.edit().putBoolean("Default_dns",true).apply();
+									mPref.edit().putBoolean("Google_dns",false).apply();
+									mPref.edit().putBoolean("Primary_dns",false).apply();
+								}else if(dnsCheckBox.getText().toString().equals("DNS (Google DNS)")){
+									mPref.edit().putBoolean("Default_dns",false).apply();
+									mPref.edit().putBoolean("Google_dns",true).apply();
+									mPref.edit().putBoolean("Primary_dns",false).apply();
+									mPref.edit().putString(Settings.DNSRESOLVER_KEY1,"8.8.8.8").apply();
+									mPref.edit().putString(Settings.DNSRESOLVER_KEY2,"8.8.4.4").apply();
+								}else if(dnsCheckBox.getText().toString().equals("DNS (Primary DNS)")){
+									mPref.edit().putBoolean("Default_dns",false).apply();
+									mPref.edit().putBoolean("Google_dns",false).apply();
+									mPref.edit().putBoolean("Primary_dns",true).apply();
+
+								}else{
+									mPref.edit().putBoolean(Settings.DNSFORWARD_KEY,false).apply();
+									mPref.edit().putString(Settings.DNSTYPE_KEY, Settings.DNS_DEFAULT_KEY).apply();
+									//custom.setText(mPref.getString(Settings.DNSTYPE_KEY,Settings.DNS_DEFAULT_KEY));
+								}
+								Intent TunnDNS = new Intent(SocksHttpMainActivity.this, CustomDNS.class);
+								startActivity(TunnDNS);
+							}
+
+
+						}).show();
+				} else {
+					Toast.makeText(SocksHttpMainActivity.this, "DNS (Google DNS) is off",
+								   Toast.LENGTH_SHORT).show();
+				}
+				break;
+
+			/*case R.id.activity_mainAutorText:
+				String url = "http://t.me/SlipkProjects";
+				Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+				intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+				startActivity(Intent.createChooser(intent, getText(R.string.open_with)));
+				break;
+				*/
+			
+		}
+	}
+
+	protected void showBoasVindas() {
+		new AlertDialog.Builder(this)
+            . setTitle(R.string.attention)
+            . setMessage(R.string.first_start_msg)
+			. setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface di, int p) {
+					// ok
+				}
+			})
+			. setCancelable(false)
+            . show();
+	}
+	
+	@Override
+    public void updateState(final String state, String msg, int localizedResId, final ConnectionStatus level, Intent intent)
+    {
+        mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    doUpdateLayout();
+                    
+                    if (SkStatus.isTunnelActive()){
+                     
+
+                        if (level.equals(ConnectionStatus.LEVEL_CONNECTED)){
+                            connectionStatus.setText(R.string.connected);
+                            startService(new Intent(SocksHttpMainActivity.this, NetSpeedNotification.class));
+                            payloadSpinner.setEnabled(false);
+                            serverSpinner.setEnabled(false);
+                            
+                            dataThread = new Thread(new MyThreadClass());
+                            new edsongraphflip(SocksHttpMainActivity.this, "start");
+                            dataThread.setName("showDataGraph");
+                            dataThread.start();         
+							graph.start();
+                       
+                        }
+
+                        if (level.equals(ConnectionStatus.LEVEL_NOTCONNECTED)){
+                            connectionStatus.setText(R.string.servicestop);
+                        }   
+
+                        if (level.equals(ConnectionStatus.LEVEL_CONNECTING_SERVER_REPLIED)){
+                            connectionStatus.setText(R.string.authenticating);
+                        }       
+
+                        if (level.equals(ConnectionStatus.LEVEL_CONNECTING_NO_SERVER_REPLY_YET)){
+                            connectionStatus.setText(R.string.connecting);
+                        }           
+                        if (level.equals(ConnectionStatus.LEVEL_AUTH_FAILED)){
+                            connectionStatus.setText(R.string.authfailed);
+                        }                   
+                        if (level.equals(ConnectionStatus.UNKNOWN_LEVEL)){
+                            payloadSpinner.setEnabled(true);
+                            serverSpinner.setEnabled(true);
+                            connectionStatus.setText(R.string.disconnected);
+                            stopService(new Intent(SocksHttpMainActivity.this,NetSpeedNotification.class));
+                            StatisticGraphData.getStatisticData().getDataTransferStats().stop();
+                            new edsongraphflip(SocksHttpMainActivity.this, "stop");
+							graph.stop();
+                        }               
+                        //if (level.equals(ConnectionStatus.LEVEL_RECONNECTING)){
+                        //      status.setText(R.string.reconnecting);
+                    }               
+                    if (level.equals(ConnectionStatus.LEVEL_NONETWORK)){
+                        connectionStatus.setText(R.string.nonetwork);
+                    }           
+                }
+            });
+		
+		switch (state) {
+			case SkStatus.SSH_CONECTADO:
+				// carrega ads banner
+				if (adsBannerView != null && TunnelUtils.isNetworkOnline(SocksHttpMainActivity.this)) {
+					adsBannerView.setAdListener(new AdListener() {
+						@Override
+						public void onAdLoaded() {
+							if (adsBannerView != null && !isFinishing()) {
+								adsBannerView.setVisibility(View.VISIBLE);
+							}
+						}
+					});
+					adsBannerView.postDelayed(new Runnable() {
+						@Override
+						public void run() {
+							// carrega ads interestitial
+							
+							// ads banner
+							if (adsBannerView != null && !isFinishing()) {
+								adsBannerView.loadAd(new AdRequest.Builder()
+									.build());
+							}
+						}
+					}, 5000);
+				}
+			break;
+		}
+	}
+
+
+	/**
+	 * Recebe locais Broadcast
+	 */
+
+	private BroadcastReceiver mActivityReceiver = new BroadcastReceiver() {//PAPI KEVIN CODE
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action == null)
+                return;
+
+            if (action.equals(UPDATE_VIEWS) && !isFinishing()) {
+				doUpdateLayout();
+			}
+			
+        }
+    };
+ 
+	@Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		
+		// Menu Itens
+		switch (item.getItemId()) {
+			case R.id.Share_Logs:
+				Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
+                sharingIntent.setType("text/plain");
+                sharingIntent.putExtra(Intent.EXTRA_TEXT,SkStatus.CopyLogs());
+                sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, SkStatus.CopyLogs());
+                startActivity(Intent.createChooser(sharingIntent, "Share via"));
+				break;
+
+			
+				// logs opções
+			case R.id.miLimparLogs:
+				mLogAdapter.clearLog();
+				break;
+                
+            case R.id.offlibe:
+                offlineUpdate();
+                break;
+            case R.id.clear:
+                doRestart();
+				break;
+		}
+
+		return super.onOptionsItemSelected(item);
+	}
+    
+    
+    public void doRestart() {
+        Intent mStartActivity = new Intent(SocksHttpMainActivity.this, LauncherActivity.class);
+        int mPendingIntentId = 123456;
+        PendingIntent mPendingIntent = PendingIntent.getActivity(SocksHttpMainActivity.this, mPendingIntentId, mStartActivity, PendingIntent.FLAG_CANCEL_CURRENT);
+        AlarmManager mgr = (AlarmManager) SocksHttpMainActivity.this.getSystemService(Context.ALARM_SERVICE);
+        mgr.set(AlarmManager.RTC, System.currentTimeMillis() + 100, mPendingIntent);
+        System.exit(0);
+        finish();
+	}
+
+	@Override
+	public void onBackPressed() {
+		
+		
+			showExitDialog();
+		
+	}
+    private void setSpinner() {
+        SecurePreferences prefsPrivate = mConfig.getPrefsPrivate();
+        serverSpinner.setSelection(prefsPrivate.getInt("LastSelectedServer", 0));
+        payloadSpinner.setSelection(prefsPrivate.getInt("LastSelectedPayload", 0));
+	}
+    
+   
+
+	@Override
+    public void onResume() {
+        super.onResume();
+		setSpinner();
+
+		SkStatus.addStateListener(this);
+		new Timer().schedule(new TimerTask()
+			{
+				@Override
+				public void run()
+				{
+					runOnUiThread(new Runnable()
+						{
+							@Override
+							public void run()
+							{
+								updateHeaderCallback();
+								// TODO: Implement this method
+							}
+						});
+					// TODO: Implement this method
+				}
+			}, 0,1000);
+            
+		if (adsBannerView != null) {
+			adsBannerView.resume();
+		}
+    }
+
+	@Override
+	protected void onPause()
+	{
+		super.onPause();
+		
+		doSaveData();
+		
+		SkStatus.removeStateListener(this);
+		
+		if (adsBannerView != null) {
+			adsBannerView.pause();
+		}
+	}
+
+	@Override
+	protected void onDestroy()
+	{
+		super.onDestroy();
+
+		LocalBroadcastManager.getInstance(this)
+			.unregisterReceiver(mActivityReceiver);
+			
+		if (adsBannerView != null) {
+			adsBannerView.destroy();
+		}
+	}
+
+
+	/**
+	 * DrawerLayout Listener
+	 */
+
+	/**
+	 * Utils
+	 */
+
+	public static void updateMainViews(Context context) {
+		Intent updateView = new Intent(UPDATE_VIEWS);
+		LocalBroadcastManager.getInstance(context)
+			.sendBroadcast(updateView);
+	}
+	
+	public void showExitDialog() {
+		AlertDialog dialog = new AlertDialog.Builder(this).
+			create();
+		dialog.setTitle(getString(R.string.attention));
+		dialog.setMessage(getString(R.string.alert_exit));
+
+		dialog.setButton(DialogInterface.BUTTON_POSITIVE, getString(R.
+				string.exit),
+			new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which)
+				{
+					Utils.exitAll(SocksHttpMainActivity.this);
+				}
+			}
+		);
+
+		dialog.setButton(DialogInterface.BUTTON_NEGATIVE, getString(R.
+				string.minimize),
+			new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					// minimiza app
+					Intent startMain = new Intent(Intent.ACTION_MAIN);
+					startMain.addCategory(Intent.CATEGORY_HOME);
+					startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+					startActivity(startMain);
+				}
+			}
+		);
+
+		dialog.show();
+	}
+}
